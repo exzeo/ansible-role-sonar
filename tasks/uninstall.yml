@@ -1,0 +1,14 @@
+---
+
+  - name: remove tmp dir
+    ansible.builtin.file:
+      state: absent
+      path: "{{ sonar_path }}"
+
+  - name: 'remove {{ sonar_path }}/bin from PATH'
+    ansible.builtin.lineinfile:
+      path: /etc/environment
+      regexp: 'PATH=(["])((?!.*?{{ sonar_path }}/bin).*?)(["])$'
+      line: 'PATH=\1\2:{{ sonar_path }}/bin\3'
+      backrefs: yes
+      state: absent

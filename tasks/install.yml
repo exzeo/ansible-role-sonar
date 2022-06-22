@@ -1,0 +1,78 @@
+---
+- name: Install dependencies
+  ansible.builtin.apt:
+    name: "{{ dependencies_packages }}"
+    state: present
+    force: true
+    update_cache: yes
+  register: package_ok
+  retries: "{{ global_downloads_retries }}"
+  delay: "{{ global_downloads_delay }}"
+  until: package_ok is success
+
+- name: Check current sonar version.
+  ansible.builtin.command: "{{ sonar_path }}/bin/sonar-scanner --version"
+  register: sonar_current_version
+  changed_when: false
+  failed_when: false
+
+- name: Get Latest Version
+  ansible.builtin.uri:
+    url: "{{ sonar_latest_url }}"
+  register: sonar_latest_info
+  changed_when: false
+  when: sonar_version|length == 0
+
+- name: Set Latest Version
+  ansible.builtin.set_fact:
+    sonar_version: "{{ sonar_latest_info.json.tag_name | replace('v','') }}"
+  when: sonar_version|length == 0
+
+- name: Install Sonar
+  when: >
+    (sonar_current_version.rc != 0 ) or
+    (sonar_version | length > 0 and sonar_version not in sonar_current_version.stdout) or
+    (sonar_version | length == 0 and sonar_current_version.stdout not in sonar_latest_info.json.tag_name)
+
+  block:
+    - name: Download sonar-scanner.zip
+      ansible.builtin.get_url:
+        url: "{{ sonar_download_url }}"
+        dest: /tmp/sonar-{{ sonar_version }}.zip
+        force: true
+        mode: 0755  
+
+    - name: Unarchive sonar-scanner
+      ansible.builtin.unarchive:
+        src: /tmp/sonar-{{ sonar_version }}.zip
+        dest: /tmp
+        remote_src: yes
+        mode: 0755  
+
+    - name: Copy sonar-scanner to /usr/local/bin
+      ansible.builtin.copy:
+        src: /tmp/sonar-scanner-{{ sonar_version }}-{{ ansible_system | lower }}/
+        dest: "{{ sonar_path }}"
+        mode: 0755  
+        remote_src: yes
+
+    - name: Clean up folders
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /tmp/sonar-scanner-{{ sonar_version }}-{{ ansible_system | lower }}/
+        - /tmp/sonar-{{ sonar_version }}.zip  
+
+- name: Creating a symlink for sonar
+  ansible.builtin.file:
+    dest: "/usr/local/bin/sonar-scanner"
+    src: "{{ sonar_path }}/bin/sonar-scanner"
+    state: link
+
+- name: 'Add {{ sonar_path }}/bin to PATH'
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: 'PATH=(["])((?!.*?{{ sonar_path }}/bin).*?)(["])$'
+    line: 'PATH=\1\2:{{ sonar_path }}/bin\3'
+    backrefs: yes

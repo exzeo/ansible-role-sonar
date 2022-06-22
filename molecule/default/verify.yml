@@ -1,0 +1,21 @@
+---
+
+- name: Verify
+  hosts: all
+
+  tasks:
+    - name: Check current sonar version.
+      command: "sonar-scanner --version"
+      register: sonar_current_version
+      changed_when: false
+      failed_when: false
+
+    - name: Get Latest Version
+      uri:
+        url: "https://api.github.com/repos/SonarSource/sonar-scanner-cli/releases/latest"
+      register: sonar_latest_info
+
+    - name: Ensure trivy version output contains correct version string
+      assert:
+        that:
+          - 'sonar_latest_info.json.tag_name in sonar_current_version.stdout'
