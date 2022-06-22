@@ -1,0 +1,12 @@
+---
+
+global_downloads_retries: 5
+global_downloads_delay: 2
+
+dependencies_packages:
+- unzip
+
+sonar_path: /usr/local/sonar-scanner
+
+sonar_latest_url: "https://api.github.com/repos/SonarSource/sonar-scanner-cli/releases/latest"
+sonar_download_url: "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-{{ sonar_version }}-{{ ansible_system | lower }}.zip"

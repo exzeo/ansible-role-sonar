@@ -1,0 +1,16 @@
+---
+
+- name: Verify
+  hosts: all
+
+  tasks:
+    - name: Check current sonar version.
+      command: "sonar-scanner --version"
+      register: sonar_current_version
+      changed_when: false
+      failed_when: false
+
+    - name: Ensure trivy version output contains correct version string
+      assert:
+        that:
+          - sonar_current_version.rc != 0

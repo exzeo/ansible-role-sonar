@@ -1,0 +1,8 @@
+---
+
+# Version of 'sonar' to install, defaults to latest version
+# sonar_version: "4.6.2.2472"
+sonar_version: ""
+
+# Toggling this will uninstall from the server
+uninstall: false
